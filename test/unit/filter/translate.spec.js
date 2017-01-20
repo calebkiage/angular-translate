@@ -1,3 +1,7 @@
+/* jshint camelcase: false, quotmark: false, unused: false */
+/* global inject: false */
+'use strict';
+
 describe('pascalprecht.translate', function () {
 
   describe('$translateFilter', function () {
@@ -39,7 +43,9 @@ describe('pascalprecht.translate', function () {
     it('should return with translation id if translation doesn\'t exist', function () {
       expect($translate('WOOP')).toEqual('WOOP');
     });
-
+    it('should return with translation id if translation doesn\'t exist', function () {
+         expect($translate(null)).toEqual(null);
+    });
     it('should return translation if translation id exist', function () {
       expect($translate('TRANSLATION_ID')).toEqual('Lorem Ipsum ');
     });
@@ -83,6 +89,28 @@ describe('pascalprecht.translate', function () {
       expect(value[5]).toEqual('10');
       expect(value[6]).toEqual('55');
     });
+
+  it('should not throw errors when translation id is not a string', function() {
+    var value = [
+      $translate(4.5),
+      $translate(4),
+      $translate([]),
+      $translate({}),
+      $translate(true),
+      $translate(null),
+      $translate(undefined)
+    ];
+
+    expect(value[0]).toEqual('4.5');
+    expect(value[1]).toEqual('4');
+    /* I don't care what these values are, as long as $translate doesn't throw an error.
+    expect(value[2]).toEqual({});
+    expect(value[3]).toEqual('[object Object]');
+    expect(value[4]).toEqual('true');
+    expect(value[5]).toEqual(null);
+    expect(value[6]).toEqual(undefined);
+    */
+  });
 
     if (angular.version.major === 1 && angular.version.minor <= 2) {
       // Until and including AJS 1.2, a filter was bound to a context (current scope). This was removed in AJS 1.3
@@ -172,5 +200,181 @@ describe('pascalprecht.translate', function () {
       expect($translate('FOO')).toEqual('Have foo');
       expect($translate('FOO2')).toEqual('-+-+ FOO2 -+-+');
     }));
+  });
+
+  describe('filter should be stateful', function () {
+
+    beforeEach(module('pascalprecht.translate', function ($translateProvider) {
+      $translateProvider
+        .translations('en', {
+          'HELLO': 'Hello'
+        })
+        .translations('de', {
+          'HELLO': 'Hallo'
+        })
+        .preferredLanguage('en');
+    }));
+
+    var $translate, $rootScope, $compile, $timeout;
+    beforeEach(inject(function (_$rootScope_, _$compile_, _$translate_, _$timeout_) {
+      $rootScope = _$rootScope_;
+      $compile = _$compile_;
+      $translate = _$translate_;
+      $timeout = _$timeout_;
+    }));
+
+    it('filter should be re-evaluated on language change', function (done) {
+      var element = $compile(angular.element('<div>{{"HELLO" | translate}}</div>'))($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toEqual('Hello');
+      $translate.use('de');
+      setTimeout(function () {
+        $rootScope.$digest();
+        expect(element.html()).toEqual('Hallo');
+        done();
+      }, 100);
+    });
+  });
+
+  describe('filter can be optionally stateless', function () {
+
+    beforeEach(module('pascalprecht.translate', function ($translateProvider) {
+      $translateProvider
+        .translations('en', {
+          'HELLO': 'Hello'
+        })
+        .translations('de', {
+          'HELLO': 'Hallo'
+        })
+        .preferredLanguage('en')
+        .statefulFilter(false);
+    }));
+
+    var $translate, $rootScope, $compile, $timeout;
+    beforeEach(inject(function (_$rootScope_, _$compile_, _$translate_, _$timeout_) {
+      $rootScope = _$rootScope_;
+      $compile = _$compile_;
+      $translate = _$translate_;
+      $timeout = _$timeout_;
+    }));
+
+    if (angular.version.major === 1 && angular.version.minor >= 3) {
+      it('filter should be not re-evaluated on language change', function (done) {
+        var element = $compile(angular.element('<div>{{"HELLO" | translate}}</div>'))($rootScope);
+        $rootScope.$digest();
+        expect(element.html()).toEqual('Hello');
+        $translate.use('de');
+        setTimeout(function () {
+          $rootScope.$digest();
+          expect(element.html()).toEqual('Hello'); // regardless the language change (scope)
+          done();
+        }, 100);
+      });
+    } else {
+      it('filter should be re-evaluated on language change', function (done) {
+        var element = $compile(angular.element('<div>{{"HELLO" | translate}}</div>'))($rootScope);
+        $rootScope.$digest();
+        expect(element.html()).toEqual('Hello');
+        $translate.use('de');
+        setTimeout(function () {
+          $rootScope.$digest();
+          expect(element.html()).toEqual('Hallo');
+          done();
+        }, 100);
+      });
+    }
+  });
+
+  describe('filter can receive a forced language', function () {
+
+    beforeEach(module('pascalprecht.translate', function ($translateProvider) {
+      $translateProvider
+        .translations('en', {
+          'HELLO': 'Hello'
+        })
+        .translations('de', {
+          'HELLO': 'Hallo'
+        })
+        .preferredLanguage('en');
+    }));
+
+    var $translate, $rootScope, $compile;
+    beforeEach(inject(function (_$rootScope_, _$compile_, _$translate_) {
+      $rootScope = _$rootScope_;
+      $compile = _$compile_;
+      $translate = _$translate_;
+    }));
+
+    it('should use preferred without override', function () {
+      var element = $compile('<div>{{"HELLO" | translate}}</div>')($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toBe('Hello');
+    });
+
+    it('should use forced with override', function () {
+      var element = $compile('<div>{{"HELLO" | translate:null:null:"de"}}</div>')($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toBe('Hallo');
+    });
+  });
+
+  describe('filter handling a falsy value', function () {
+
+    beforeEach(module('pascalprecht.translate', function ($translateProvider) {
+      $translateProvider
+        .translations('en', {
+          'HELLO': 'Hello'
+        })
+        .translations('de', {
+          'HELLO': 'Hallo'
+        })
+        .preferredLanguage('en');
+    }));
+
+    var $translate, $rootScope, $compile;
+    beforeEach(inject(function (_$rootScope_, _$compile_, _$translate_) {
+      $rootScope = _$rootScope_;
+      $compile = _$compile_;
+      $translate = _$translate_;
+    }));
+
+    it('should work with "0"', function () {
+      var element = $compile('<div>{{0 | translate}}</div>')($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toBe('0');
+    });
+
+    it('should work with "false"', function () {
+      var element = $compile('<div>{{false | translate}}</div>')($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toBe('');
+    });
+
+    it('should work with "null"', function () {
+      var element = $compile('<div>{{null | translate}}</div>')($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toBe('');
+    });
+
+    it('should work with "0" (by scope)', function () {
+      $rootScope.x = 0;
+      var element = $compile('<div>{{x | translate}}</div>')($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toBe('0');
+    });
+
+    it('should work with "false" (by scope)', function () {
+      $rootScope.x = false;
+      var element = $compile('<div>{{x | translate}}</div>')($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toBe('');
+    });
+
+    it('should work with "null" (by scope)', function () {
+      $rootScope.x = null;
+      var element = $compile('<div>{{x | translate}}</div>')($rootScope);
+      $rootScope.$digest();
+      expect(element.html()).toBe('');
+    });
   });
 });

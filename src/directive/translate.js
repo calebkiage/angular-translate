@@ -2,21 +2,23 @@ angular.module('pascalprecht.translate')
 /**
  * @ngdoc directive
  * @name pascalprecht.translate.directive:translate
- * @requires $compile
- * @requires $filter
- * @requires $interpolate
- * @restrict A
+ * @requires $interpolate, 
+ * @requires $compile, 
+ * @requires $parse, 
+ * @requires $rootScope
+ * @restrict AE
  *
  * @description
  * Translates given translation id either through attribute or DOM content.
- * Internally it uses `translate` filter to translate translation id. It possible to
+ * Internally it uses $translate service to translate the translation id. It possible to
  * pass an optional `translate-values` object literal as string into translation id.
  *
  * @param {string=} translate Translation id which could be either string or interpolated string.
  * @param {string=} translate-values Values to pass into translation id. Can be passed as object literal string or interpolated object.
  * @param {string=} translate-attr-ATTR translate Translation id and put it into ATTR attribute.
  * @param {string=} translate-default will be used unless translation was successful
- * @param {boolean=} translate-compile (default true if present) defines locally activation of {@link pascalprecht.translate.$translate#usePostCompiling}
+ * @param {boolean=} translate-compile (default true if present) defines locally activation of {@link pascalprecht.translate.$translateProvider#methods_usePostCompiling}
+ * @param {boolean=} translate-keep-content (default true if present) defines that in case a KEY could not be translated, that the existing content is left in the innerHTML}
  *
  * @example
    <example module="ngView">
@@ -33,6 +35,7 @@ angular.module('pascalprecht.translate')
         <pre translate="WITH_VALUES" translate-values="{{values}}"></pre>
         <pre translate translate-values="{{values}}">WITH_VALUES</pre>
         <pre translate translate-attr-title="WITH_VALUES" translate-values="{{values}}"></pre>
+        <pre translate="WITH_CAMEL_CASE_KEY" translate-value-camel-case-key="Hi"></pre>
 
       </div>
     </file>
@@ -43,7 +46,8 @@ angular.module('pascalprecht.translate')
 
         $translateProvider.translations('en',{
           'TRANSLATION_ID': 'Hello there!',
-          'WITH_VALUES': 'The following value is dynamic: {{value}}'
+          'WITH_VALUES': 'The following value is dynamic: {{value}}',
+          'WITH_CAMEL_CASE_KEY': 'The interpolation key is camel cased: {{camelCaseKey}}'
         }).preferredLanguage('en');
 
       });
@@ -80,12 +84,19 @@ angular.module('pascalprecht.translate')
           element = $compile('<p translate translate-attr-title="TRANSLATION_ID"></p>')($rootScope);
           $rootScope.$digest();
           expect(element.attr('title')).toBe('Hello there!');
+
+          element = $compile('<p translate="WITH_CAMEL_CASE_KEY" translate-value-camel-case-key="Hello"></p>')($rootScope);
+          $rootScope.$digest();
+          expect(element.text()).toBe('The interpolation key is camel cased: Hello');
         });
       });
     </file>
    </example>
  */
-.directive('translate', ['$translate', '$q', '$interpolate', '$compile', '$parse', '$rootScope', function ($translate, $q, $interpolate, $compile, $parse, $rootScope) {
+.directive('translate', translateDirective);
+function translateDirective($translate, $interpolate, $compile, $parse, $rootScope) {
+
+  'use strict';
 
   /**
    * @name trim
@@ -97,7 +108,7 @@ angular.module('pascalprecht.translate')
    * @returns {string} The string stripped of whitespace from both ends
    */
   var trim = function() {
-    return this.replace(/^\s+|\s+$/g, '');
+    return this.toString().replace(/^\s+|\s+$/g, '');
   };
 
   return {
@@ -122,7 +133,24 @@ angular.module('pascalprecht.translate')
         scope.interpolateParams = {};
         scope.preText = '';
         scope.postText = '';
+        scope.translateNamespace = getTranslateNamespace(scope);
         var translationIds = {};
+
+        var initInterpolationParams = function (interpolateParams, iAttr, tAttr) {
+          // initial setup
+          if (iAttr.translateValues) {
+            angular.extend(interpolateParams, $parse(iAttr.translateValues)(scope.$parent));
+          }
+          // initially fetch all attributes if existing and fill the params
+          if (translateValueExist) {
+            for (var attr in tAttr) {
+              if (Object.prototype.hasOwnProperty.call(iAttr, attr) && attr.substr(0, 14) === 'translateValue' && attr !== 'translateValues') {
+                var attributeName = angular.lowercase(attr.substr(14, 1)) + attr.substr(15);
+                interpolateParams[attributeName] = tAttr[attr];
+              }
+            }
+          }
+        };
 
         // Ensures any change of the attribute "translate" containing the id will
         // be re-stored to the scope's "translationId".
@@ -136,14 +164,16 @@ angular.module('pascalprecht.translate')
           }
 
           if (angular.equals(translationId , '') || !angular.isDefined(translationId)) {
+            var iElementText = trim.apply(iElement.text());
+
             // Resolve translation id by inner html if required
-            var interpolateMatches = trim.apply(iElement.text()).match(interpolateRegExp);
+            var interpolateMatches = iElementText.match(interpolateRegExp);
             // Interpolate translation id if required
             if (angular.isArray(interpolateMatches)) {
               scope.preText = interpolateMatches[1];
               scope.postText = interpolateMatches[3];
               translationIds.translate = $interpolate(interpolateMatches[2])(scope.$parent);
-              var watcherMatches = iElement.text().match(watcherRegExp);
+              var watcherMatches = iElementText.match(watcherRegExp);
               if (angular.isArray(watcherMatches) && watcherMatches[2] && watcherMatches[2].length) {
                 observeElementTranslation._unwatchOld = scope.$watch(watcherMatches[2], function (newValue) {
                   translationIds.translate = newValue;
@@ -151,7 +181,8 @@ angular.module('pascalprecht.translate')
                 });
               }
             } else {
-              translationIds.translate = iElement.text().replace(/^\s+|\s+$/g,'');
+              // do not assigne the translation id if it is empty.
+              translationIds.translate = !iElementText ? undefined : iElementText;
             }
           } else {
             translationIds.translate = translationId;
@@ -165,6 +196,9 @@ angular.module('pascalprecht.translate')
             updateTranslations();
           });
         };
+
+        // initial setup with values
+        initInterpolationParams(scope.interpolateParams, iAttr, tAttr);
 
         var firstAttributeChangedEvent = true;
         iAttr.$observe('translate', function (translationId) {
@@ -182,13 +216,14 @@ angular.module('pascalprecht.translate')
         });
 
         for (var translateAttr in iAttr) {
-          if (iAttr.hasOwnProperty(translateAttr) && translateAttr.substr(0, 13) === 'translateAttr') {
+          if (iAttr.hasOwnProperty(translateAttr) && translateAttr.substr(0, 13) === 'translateAttr' && translateAttr.length > 13) {
             observeAttributeTranslation(translateAttr);
           }
         }
 
         iAttr.$observe('translateDefault', function (value) {
           scope.defaultText = value;
+          updateTranslations();
         });
 
         if (translateValuesExist) {
@@ -218,16 +253,21 @@ angular.module('pascalprecht.translate')
         // Master update function
         var updateTranslations = function () {
           for (var key in translationIds) {
-            if (translationIds.hasOwnProperty(key)) {
-              updateTranslation(key, translationIds[key], scope, scope.interpolateParams, scope.defaultText);
+            if (translationIds.hasOwnProperty(key) && translationIds[key] !== undefined) {
+              updateTranslation(key, translationIds[key], scope, scope.interpolateParams, scope.defaultText, scope.translateNamespace);
             }
           }
         };
 
         // Put translation processing function outside loop
-        var updateTranslation = function(translateAttr, translationId, scope, interpolateParams, defaultTranslationText) {
+        var updateTranslation = function(translateAttr, translationId, scope, interpolateParams, defaultTranslationText, translateNamespace) {
           if (translationId) {
-            $translate(translationId, interpolateParams, translateInterpolation, defaultTranslationText)
+            // if translation id starts with '.' and translateNamespace given, prepend namespace
+            if (translateNamespace && translationId.charAt(0) === '.') {
+              translationId = translateNamespace + translationId;
+            }
+
+            $translate(translationId, interpolateParams, translateInterpolation, defaultTranslationText, scope.translateLanguage)
               .then(function (translation) {
                 applyTranslation(translation, scope, true, translateAttr);
               }, function (translationId) {
@@ -240,12 +280,16 @@ angular.module('pascalprecht.translate')
         };
 
         var applyTranslation = function (value, scope, successful, translateAttr) {
-          if (translateAttr === 'translate') {
-            // default translate into innerHTML
-            if (!successful && typeof scope.defaultText !== 'undefined') {
+          if (!successful) {
+            if (typeof scope.defaultText !== 'undefined') {
               value = scope.defaultText;
             }
-            iElement.html(scope.preText + value + scope.postText);
+          }
+          if (translateAttr === 'translate') {
+            // default translate into innerHTML
+            if (successful || (!successful && !$translate.isKeepContent() && typeof iAttr.translateKeepContent === 'undefined')) {
+              iElement.empty().append(scope.preText + value + scope.postText);
+            }
             var globallyEnabled = $translate.isPostCompilingEnabled();
             var locallyDefined = typeof tAttr.translateCompile !== 'undefined';
             var locallyEnabled = locallyDefined && tAttr.translateCompile !== 'false';
@@ -254,15 +298,22 @@ angular.module('pascalprecht.translate')
             }
           } else {
             // translate attribute
-            if (!successful && typeof scope.defaultText !== 'undefined') {
-              value = scope.defaultText;
+            var attributeName = iAttr.$attr[translateAttr];
+            if (attributeName.substr(0, 5) === 'data-') {
+              // ensure html5 data prefix is stripped
+              attributeName = attributeName.substr(5);
             }
-            var attributeName = iAttr.$attr[translateAttr].substr(15);
+            attributeName = attributeName.substr(15);
             iElement.attr(attributeName, value);
           }
         };
 
-        scope.$watch('interpolateParams', updateTranslations, true);
+        if (translateValuesExist || translateValueExist || iAttr.translateDefault) {
+          scope.$watch('interpolateParams', updateTranslations, true);
+        }
+
+        // Replaced watcher on translateLanguage with event listener
+        scope.$on('translateLanguageChanged', updateTranslations);
 
         // Ensures the text will be refreshed after the current language was changed
         // w/ $translate.use(...)
@@ -270,11 +321,36 @@ angular.module('pascalprecht.translate')
 
         // ensure translation will be looked up at least one
         if (iElement.text().length) {
-          observeElementTranslation('');
+          if (iAttr.translate) {
+            observeElementTranslation(iAttr.translate);
+          } else {
+            observeElementTranslation('');
+          }
+        } else if (iAttr.translate) {
+          // ensure attribute will be not skipped
+          observeElementTranslation(iAttr.translate);
         }
         updateTranslations();
         scope.$on('$destroy', unbind);
       };
     }
   };
-}]);
+}
+
+/**
+ * Returns the scope's namespace.
+ * @private
+ * @param scope
+ * @returns {string}
+ */
+function getTranslateNamespace(scope) {
+  'use strict';
+  if (scope.translateNamespace) {
+    return scope.translateNamespace;
+  }
+  if (scope.$parent) {
+    return getTranslateNamespace(scope.$parent);
+  }
+}
+
+translateDirective.displayName = 'translateDirective';

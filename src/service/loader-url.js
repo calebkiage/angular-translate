@@ -16,7 +16,11 @@ angular.module('pascalprecht.translate')
  * @param {object} options Options object, which gets the url, key and
  * optional queryParameter ('lang' is used by default).
  */
-.factory('$translateUrlLoader', ['$q', '$http', function ($q, $http) {
+.factory('$translateUrlLoader', $translateUrlLoader);
+
+function $translateUrlLoader($q, $http) {
+
+  'use strict';
 
   return function (options) {
 
@@ -24,21 +28,21 @@ angular.module('pascalprecht.translate')
       throw new Error('Couldn\'t use urlLoader since no url is given!');
     }
 
-    var deferred = $q.defer(),
-        requestParams = {};
+    var requestParams = {};
 
     requestParams[options.queryParameter || 'lang'] = options.key;
 
-    $http(angular.extend({
+    return $http(angular.extend({
       url: options.url,
       params: requestParams,
       method: 'GET'
-    }, options.$http)).success(function (data) {
-      deferred.resolve(data);
-    }).error(function (data) {
-      deferred.reject(options.key);
-    });
-
-    return deferred.promise;
+    }, options.$http))
+      .then(function(result) {
+        return result.data;
+      }, function () {
+        return $q.reject(options.key);
+      });
   };
-}]);
+}
+
+$translateUrlLoader.displayName = '$translateUrlLoader';

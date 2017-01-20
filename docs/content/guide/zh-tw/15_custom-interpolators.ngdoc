@@ -15,7 +15,7 @@
 
 - `setLocale(langKey)` - 設置當前使用的語言
 - `getInterpolationIdentifier()` - 返回一個標識符插值
-- `interpolate(string, interpolateParams)` - 對字符串的params參數進行插值處理
+- `interpolate(string, interpolateParams, sanitizeStrategy)` - 對字符串的params參數進行插值處理
 
 讓我們來看看怎麼實現自定義的插值服務。首先，我們實現的接口：
 
@@ -32,7 +32,7 @@ app.factory('customInterpolation', function () {
 
     },
 
-    interpolate: function (string, interpolateParams) {
+    interpolate: function (string, interpolateParams, sanitizeStrategy) {
 
     }
   };
@@ -56,8 +56,8 @@ app.factory('customInterpolation', function ($interpolate) {
       return 'custom';
     },
 
-    interpolate: function (string, interpolateParams) {
-      return $locale + '_' + $interpolate(string)(interpolateParams) + '_' + $locale;
+    interpolate: function (string, interpolateParams, sanitizeStrategy) {
+      return $locale + '_' + $interpolate(string)(interpolateParams, sanitizeStrategy) + '_' + $locale;
     }
   };
 });
@@ -99,16 +99,16 @@ $translateProvider.addInterpolation('customInterpolation');
           HEADLINE: 'I\'m a headline',
           TEXT: 'I\'m using default interpolation {{ val + val }}',
           PLURAL: '{GENDER, select, male{He} female{She} other{They}} liked this.',
-          BUTTON_LANG_EN: 'english',
-          BUTTON_LANG_DE: 'german'
+          BUTTON_LANG_EN: 'English',
+          BUTTON_LANG_DE: 'German'
         });
 
         $translateProvider.translations('de', {
           HEADLINE: 'Ich bin eine Überschrift',
           TEXT: 'Ich benutze default interpolation {{ val + val }}',
           PLURAL: '{GENDER, select, male{Er fand} female{Sie fand} other{Sie fanden}} es gut.',
-          BUTTON_LANG_EN: 'englisch',
-          BUTTON_LANG_DE: 'deutsch'
+          BUTTON_LANG_EN: 'Englisch',
+          BUTTON_LANG_DE: 'Deutsch'
         });
       }]);
 
@@ -133,8 +133,8 @@ $translateProvider.addInterpolation('customInterpolation');
             return 'custom';
           },
 
-          interpolate: function (string, interpolateParams) {
-            return $locale + '_' + $interpolate(string)(interpolateParams) + '_' + $locale;
+          interpolate: function (string, interpolateParams, sanitizeStrategy) {
+            return $locale + '_' + $interpolate(string)(interpolateParams, sanitizeStrategy) + '_' + $locale;
           }
         };
       });

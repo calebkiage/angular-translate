@@ -1,10 +1,18 @@
+/* jshint camelcase: false, unused: false */
+/* global inject: false */
+'use strict';
+
 describe('pascalprecht.translate', function () {
 
   describe('$translateStaticFilesLoader', function () {
 
-    var $translate, $httpBackend, $translateStaticFilesLoader;
+    var $translate, $httpBackend, $translateStaticFilesLoader, $translationCache;
 
-    beforeEach(module('pascalprecht.translate'));
+    beforeEach(module('pascalprecht.translate', function ($httpProvider) {
+      if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+        $httpProvider.useLegacyPromiseExtensions(false);
+      }
+    }));
 
     beforeEach(inject(function (_$translate_, _$httpBackend_, _$translateStaticFilesLoader_, _$translationCache_) {
       $httpBackend = _$httpBackend_;
@@ -13,6 +21,7 @@ describe('pascalprecht.translate', function () {
       $translationCache = _$translationCache_;
 
       $httpBackend.when('GET', 'lang_de_DE.json').respond({HEADER: 'Ueberschrift'});
+      $httpBackend.when('GET', 'lang_de_DE.123.json').respond({HEADER: 'Ueberschrift'});
       $httpBackend.when('GET', 'lang_en_US.json').respond({HEADER:'Header'});
       $httpBackend.when('GET', 'lang_nt_VD.json').respond(404);
     }));
@@ -54,6 +63,19 @@ describe('pascalprecht.translate', function () {
       $httpBackend.flush();
     });
 
+    it('should fetch static files from file map when invoking', function () {
+      $httpBackend.expectGET('lang_de_DE.123.json');
+      $translateStaticFilesLoader({
+        key: 'de_DE',
+        prefix: 'lang_',
+        suffix: '.json',
+        fileMap : {
+          'lang_de_DE.json' : 'lang_de_DE.123.json'
+        }
+      });
+      $httpBackend.flush();
+    });
+
     it('should return a promise', function () {
       var promise = $translateStaticFilesLoader({
         key: 'de_DE',
@@ -84,7 +106,11 @@ describe('pascalprecht.translate', function () {
 
     var $translate, $httpBackend, $translateStaticFilesLoader;
 
-    beforeEach(module('pascalprecht.translate'));
+    beforeEach(module('pascalprecht.translate', function ($httpProvider) {
+      if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+        $httpProvider.useLegacyPromiseExtensions(false);
+      }
+    }));
 
     beforeEach(inject(function (_$translate_, _$httpBackend_, _$translateStaticFilesLoader_) {
       $httpBackend = _$httpBackend_;
@@ -108,7 +134,7 @@ describe('pascalprecht.translate', function () {
     it('should be a function', function () {
       expect(typeof $translateStaticFilesLoader).toBe('function');
     });
-    
+
     it('should throw an error when called without files and prefix or suffix', function () {
       expect(function () {
         $translateStaticFilesLoader({

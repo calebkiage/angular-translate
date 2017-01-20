@@ -20,7 +20,7 @@ have to be provided by a custom interpolation service:
 
 - `setLocale(langKey)` - sets the currently used language
 - `getInterpolationIdentifier()` - returns an identifier for interpolation
-- `interpolate(string, interpolateParams)` - interpolates strings against interpolate params
+- `interpolate(string, interpolateParams, sanitizeStrategy)` - interpolates strings against interpolate params
 
 Let's see how it looks like when implementing a custom interpolation service. First,
 we implement the interface:
@@ -38,7 +38,7 @@ app.factory('customInterpolation', function () {
 
     },
 
-    interpolate: function (string, interpolateParams) {
+    interpolate: function (string, interpolateParams, sanitizeStrategy) {
 
     }
   };
@@ -64,8 +64,8 @@ app.factory('customInterpolation', function ($interpolate) {
       return 'custom';
     },
 
-    interpolate: function (string, interpolateParams) {
-      return $locale + '_' + $interpolate(string)(interpolateParams) + '_' + $locale;
+    interpolate: function (string, interpolateParams, sanitizeStrategy) {
+      return $locale + '_' + $interpolate(string)(interpolateParams, sanitizeStrategy) + '_' + $locale;
     }
   };
 });
@@ -114,16 +114,16 @@ Here' what it looks like:
           HEADLINE: 'I\'m a headline',
           TEXT: 'I\'m using default interpolation {{ val + val }}',
           PLURAL: '{GENDER, select, male{He} female{She} other{They}} liked this.',
-          BUTTON_LANG_EN: 'english',
-          BUTTON_LANG_DE: 'german'
+          BUTTON_LANG_EN: 'English',
+          BUTTON_LANG_DE: 'German'
         });
 
         $translateProvider.translations('de', {
           HEADLINE: 'Ich bin eine Überschrift',
           TEXT: 'Ich benutze default interpolation {{ val + val }}',
           PLURAL: '{GENDER, select, male{Er fand} female{Sie fand} other{Sie fanden}} es gut.',
-          BUTTON_LANG_EN: 'englisch',
-          BUTTON_LANG_DE: 'deutsch'
+          BUTTON_LANG_EN: 'Englisch',
+          BUTTON_LANG_DE: 'Deutsch'
         });
       }]);
 
@@ -148,8 +148,8 @@ Here' what it looks like:
             return 'custom';
           },
 
-          interpolate: function (string, interpolateParams) {
-            return $locale + '_' + $interpolate(string)(interpolateParams) + '_' + $locale;
+          interpolate: function (string, interpolateParams, sanitizeStrategy) {
+            return $locale + '_' + $interpolate(string)(interpolateParams, sanitizeStrategy) + '_' + $locale;
           }
         };
       });

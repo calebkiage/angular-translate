@@ -42,16 +42,16 @@ Hier ein Beispiel:
           HEADLINE: 'I\'m a headline',
           TEXT: 'I\'m using default interpolation {{ val + val }}',
           PLURAL: '{GENDER, select, male{He} female{She} other{They}} liked this.',
-          BUTTON_LANG_EN: 'english',
-          BUTTON_LANG_DE: 'german'
+          BUTTON_LANG_EN: 'English',
+          BUTTON_LANG_DE: 'German'
         });
 
         $translateProvider.translations('de', {
           HEADLINE: 'Ich bin eine Überschrift',
           TEXT: 'Ich benutze default interpolation {{ val + val }}',
           PLURAL: '{GENDER, select, male{Er fand} female{Sie fand} other{Sie fanden}} es gut.',
-          BUTTON_LANG_EN: 'englisch',
-          BUTTON_LANG_DE: 'deutsch'
+          BUTTON_LANG_EN: 'Englisch',
+          BUTTON_LANG_DE: 'Deutsch'
         });
       }]);
 
@@ -74,6 +74,31 @@ Hier ein Beispiel:
 
 Schau in der Konsole des Browsers nach!
 
+## Nutzung der "Post processing" Funktion
+
+Seit Version 2.11 ist es möglich, auch eine "post processing" (wird nach Übersetzung aufgerufen) Funktion zu nutzen.
+Dieses gibt dir die Möglichkeit, zusätzliche Debug-Informationen für Übersetzer zu erhalten oder einfach nur
+eine einfache Identifikation von Schlüssel -> Inhalten zu ermöglichen, damit auch falsche Übersetzungen schnell
+gefunden werden.
+
+Um diese Funktionalität zu nutzen, muss sie über die Modulkonfiguration aktiviert werden:
+
+<pre>
+ $translateProvider.postProcess(function (translationId, translation, interpolatedTranslation, params, lang) {
+    return '<span style="color: #cccccc">' + translationId + '(' + lang + '):</span> ' +
+      (interpolatedTranslation ? interpolatedTranslation : translation);
+  });
+</pre>
+
+Die Funktion stellt fünf Parameter bereit:
+
+- translationId (Übersetzungsschlüssel)
+- translation (Übersetzungswert)
+- interpolatedTranslation (interpolierte Übersetzung)
+- params (Parameter-Werte)
+- lang (Sprachschlüssel, der zum Erfolg geführt hat)
+
+
 <br>
 <hr>
-<center>Made with unicorn &hearts; love by [PascalPrecht](http://github.com/PascalPrecht)</center>
+<center>Made with unicorn &hearts; love by the angular-translate team (http://github.com/angular-translate)</center>

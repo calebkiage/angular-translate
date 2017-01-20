@@ -1,3 +1,7 @@
+/* jshint camelcase: false, unused: false */
+/* global inject: false */
+'use strict';
+
 describe('pascalprecht.translate', function() {
 
   var counter,
@@ -9,11 +13,6 @@ describe('pascalprecht.translate', function() {
     resolveHandlerCounter = 0;
     rejectHandlerCounter = 0;
   });
-
-
-  function ThrowErrorHttpInterceptor(data) {
-    throw new Error('$http service was used!');
-  }
 
   function CounterHttpInterceptor(data) {
     ++counter;
@@ -262,7 +261,11 @@ describe('pascalprecht.translate', function() {
 
   describe('$translatePartialLoader', function () {
 
-    beforeEach(module('pascalprecht.translate'));
+    beforeEach(module('pascalprecht.translate', function ($httpProvider) {
+      if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+        $httpProvider.useLegacyPromiseExtensions(false);
+      }
+    }));
 
     var $translatePartialLoader, $rootScope;
 
@@ -418,6 +421,26 @@ describe('pascalprecht.translate', function() {
       });
     });
 
+    it('should support function in url template', function() {
+      inject(function($translatePartialLoader, $httpBackend) {
+        var getUrlTemplate = jasmine.createSpy('getUrlTemplate')
+          .and.returnValue('/locales/data.json');
+
+        $httpBackend.expectGET('/locales/data.json').respond(200, '{}');
+
+        $translatePartialLoader.addPart('part');
+        $translatePartialLoader({
+          key : 'en',
+          urlTemplate : getUrlTemplate
+        });
+
+        $httpBackend.flush();
+        expect(getUrlTemplate).toHaveBeenCalledWith('part', 'en');
+        $httpBackend.verifyNoOutstandingExpectation();
+        $httpBackend.verifyNoOutstandingRequest();
+      });
+    });
+
     it('should parse url template with multiple pattern occurrences', function () {
       inject(function($translatePartialLoader, $httpBackend) {
         $httpBackend.expectGET('/locales/part/part-en.json').respond(200, '{}');
@@ -438,7 +461,11 @@ describe('pascalprecht.translate', function() {
 
   describe('$translatePartialLoader', function () {
 
-    beforeEach(module('pascalprecht.translate'));
+    beforeEach(module('pascalprecht.translate', function ($httpProvider) {
+      if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+        $httpProvider.useLegacyPromiseExtensions(false);
+      }
+    }));
 
     it('should use error handler if it is specified', function() {
       inject(function($translatePartialLoader, $httpBackend) {
@@ -494,6 +521,9 @@ describe('pascalprecht.translate', function() {
       counter = 0;
 
       module(function($httpProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
       });
 
@@ -517,6 +547,9 @@ describe('pascalprecht.translate', function() {
       counter = 0;
 
       module(function($httpProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
       });
 
@@ -545,6 +578,9 @@ describe('pascalprecht.translate', function() {
     it('shouldn\'t load a part if it was loaded, deleted and added again', function() {
       counter = 0;
       module(function($httpProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
       });
 
@@ -575,6 +611,9 @@ describe('pascalprecht.translate', function() {
       counter = 0;
 
       module(function($httpProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
       });
 
@@ -602,6 +641,9 @@ describe('pascalprecht.translate', function() {
 
     it('should put a part into a cache and remove from the cache if the part was deleted', function() {
       module(function($httpProvider, $translateProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
         $translateProvider.useLoaderCache();
       });
@@ -637,6 +679,9 @@ describe('pascalprecht.translate', function() {
       counter = 0;
 
       module(function($httpProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
       });
 
@@ -663,6 +708,9 @@ describe('pascalprecht.translate', function() {
       counter = 0;
 
       module(function($httpProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
       });
 
@@ -697,6 +745,9 @@ describe('pascalprecht.translate', function() {
     it('shouldn\'t load a part if it was loaded, deleted and added again', function() {
       counter = 0;
       module(function($httpProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
       });
 
@@ -733,6 +784,9 @@ describe('pascalprecht.translate', function() {
       counter = 0;
 
       module(function($httpProvider) {
+        if (angular.isDefined($httpProvider.useLegacyPromiseExtensions)) {
+          $httpProvider.useLegacyPromiseExtensions(false);
+        }
         $httpProvider.defaults.transformRequest.push(CounterHttpInterceptor);
       });
 
@@ -789,7 +843,7 @@ describe('pascalprecht.translate', function() {
 
       inject(function($translatePartialLoader, $httpBackend) {
         var table;
-        
+
         $httpBackend.whenGET('/locales/part1-en.json').respond(200, '{"key1":"value1","key2":"value2","key3":"value3","key4":"value4"}');
         $httpBackend.whenGET('/locales/part2-en.json').respond(200, '{"key2" : "overridenby2","key4":"overridenby2"}');
         $httpBackend.whenGET('/locales/part3-en.json').respond(200, '{"key3" : "overridenby3","key4":"overridenby3"}');
@@ -812,6 +866,61 @@ describe('pascalprecht.translate', function() {
         });
 
         $httpBackend.flush();
+      });
+    });
+
+    it('should handle the parts being resolve out of the order which they were called', function() {
+      var $q,
+        requests = [];
+
+      module(function($provide) {
+        $provide.value('$http', function() {
+          var request = $q.defer();
+
+          requests.push(request);
+
+          return request.promise;
+        });
+      });
+
+      inject(function($translatePartialLoader, _$q_, $rootScope) {
+        var table;
+
+        $q = _$q_;
+
+        $translatePartialLoader.addPart('part1');
+        $translatePartialLoader.addPart('part2');
+        $translatePartialLoader({
+          key : 'en',
+          urlTemplate : '/locales/{part}-{lang}.json'
+        }).then(function(data) {
+          table = data;
+        }, function() {
+          table = {};
+        });
+
+        $translatePartialLoader.addPart('part3');
+        $translatePartialLoader({
+          key : 'en',
+          urlTemplate : '/locales/{part}-{lang}.json'
+        }).then(function(data) {
+          table = data;
+        }, function() {
+          table = {};
+        });
+
+        requests[2].resolve({data: {key1: 'value1'}});
+        requests[3].resolve({data: {key2: 'value2'}});
+        requests[4].resolve({data: {key3: 'value3'}});
+        $rootScope.$digest();
+
+        requests[0].resolve({data: {key1: 'value1'}});
+        requests[1].resolve({data: {key2: 'value2'}});
+        $rootScope.$digest();
+
+        expect(table.key1).toEqual('value1');
+        expect(table.key2).toEqual('value2');
+        expect(table.key3).toEqual('value3');
       });
     });
   });

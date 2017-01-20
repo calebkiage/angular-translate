@@ -6,40 +6,22 @@
  * @description
  * Uses angular's `$interpolate` services to interpolate strings against some values.
  *
- * @return {object} $translateInterpolator Interpolator service
+ * Be aware to configure a proper sanitization strategy.
+ *
+ * See also:
+ * * {@link pascalprecht.translate.$translateSanitization}
+ *
+ * @return {object} $translateDefaultInterpolation Interpolator service
  */
-angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation', ['$interpolate', function ($interpolate) {
+angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation', $translateDefaultInterpolation);
+
+function $translateDefaultInterpolation ($interpolate, $translateSanitization) {
+
+  'use strict';
 
   var $translateInterpolator = {},
       $locale,
-      $identifier = 'default',
-      $sanitizeValueStrategy = null,
-      // map of all sanitize strategies
-      sanitizeValueStrategies = {
-        escaped: function (params) {
-          var result = {};
-          for (var key in params) {
-            if (Object.prototype.hasOwnProperty.call(params, key)) {
-              if (angular.isNumber(params[key])) {
-                result[key] = params[key];
-              } else {
-                result[key] = angular.element('<div></div>').text(params[key]).html();
-              }
-            }
-          }
-          return result;
-        }
-      };
-
-  var sanitizeParams = function (params) {
-    var result;
-    if (angular.isFunction(sanitizeValueStrategies[$sanitizeValueStrategy])) {
-      result = sanitizeValueStrategies[$sanitizeValueStrategy](params);
-    } else {
-      result = params;
-    }
-    return result;
-  };
+      $identifier = 'default';
 
   /**
    * @ngdoc function
@@ -69,8 +51,12 @@ angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation
     return $identifier;
   };
 
+  /**
+   * @deprecated will be removed in 3.0
+   * @see {@link pascalprecht.translate.$translateSanitization}
+   */
   $translateInterpolator.useSanitizeValueStrategy = function (value) {
-    $sanitizeValueStrategy = value;
+    $translateSanitization.useStrategy(value);
     return this;
   };
 
@@ -80,17 +66,34 @@ angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation
    * @methodOf pascalprecht.translate.$translateDefaultInterpolation
    *
    * @description
-   * Interpolates given string agains given interpolate params using angulars
+   * Interpolates given value agains given interpolate params using angulars
    * `$interpolate` service.
+   *
+   * Since AngularJS 1.5, `value` must not be a string but can be anything input.
    *
    * @returns {string} interpolated string.
    */
-  $translateInterpolator.interpolate = function (string, interpolateParams) {
-    if ($sanitizeValueStrategy) {
-      interpolateParams = sanitizeParams(interpolateParams);
+  $translateInterpolator.interpolate = function (value, interpolationParams, context, sanitizeStrategy) {
+    interpolationParams = interpolationParams || {};
+    interpolationParams = $translateSanitization.sanitize(interpolationParams, 'params', sanitizeStrategy, context);
+
+    var interpolatedText;
+    if (angular.isNumber(value)) {
+      // numbers are safe
+      interpolatedText = '' + value;
+    } else if (angular.isString(value)) {
+      // strings must be interpolated (that's the job here)
+      interpolatedText = $interpolate(value)(interpolationParams);
+      interpolatedText = $translateSanitization.sanitize(interpolatedText, 'text', sanitizeStrategy, context);
+    } else {
+      // neither a number or a string, cant interpolate => empty string
+      interpolatedText = '';
     }
-    return $interpolate(string)(interpolateParams || {});
+
+    return interpolatedText;
   };
 
   return $translateInterpolator;
-}]);
+}
+
+$translateDefaultInterpolation.displayName = '$translateDefaultInterpolation';

@@ -10,16 +10,20 @@ angular.module('pascalprecht.translate')
  * "lang-en_US.json", "lang-de_DE.json", etc. Using this builder,
  * the response of these urls must be an object of key-value pairs.
  *
- * @param {object} options Options object, which gets prefix, suffix and key.
+ * @param {object} options Options object, which gets prefix, suffix, key, and fileMap
  */
-.factory('$translateStaticFilesLoader', ['$q', '$http', function ($q, $http) {
+.factory('$translateStaticFilesLoader', $translateStaticFilesLoader);
+
+function $translateStaticFilesLoader($q, $http) {
+
+  'use strict';
 
   return function (options) {
 
     if (!options || (!angular.isArray(options.files) && (!angular.isString(options.prefix) || !angular.isString(options.suffix)))) {
       throw new Error('Couldn\'t load static files, no files and prefix or suffix specified!');
     }
-    
+
     if (!options.files) {
       options.files = [{
         prefix: options.prefix,
@@ -32,27 +36,29 @@ angular.module('pascalprecht.translate')
         throw new Error('Couldn\'t load static file, no prefix or suffix specified!');
       }
 
-      var deferred = $q.defer();
+      var fileUrl = [
+        file.prefix,
+        options.key,
+        file.suffix
+      ].join('');
 
-      $http(angular.extend({
-        url: [
-          options.prefix,
-          options.key,
-          options.suffix
-        ].join(''),
+      if (angular.isObject(options.fileMap) && options.fileMap[fileUrl]) {
+        fileUrl = options.fileMap[fileUrl];
+      }
+
+      return $http(angular.extend({
+        url: fileUrl,
         method: 'GET',
         params: ''
-      }, options.$http)).success(function (data) {
-        deferred.resolve(data);
-      }).error(function (data) {
-        deferred.reject(options.key);
-      });
-
-      return deferred.promise;
+      }, options.$http))
+        .then(function(result) {
+          return result.data;
+        }, function () {
+          return $q.reject(options.key);
+        });
     };
 
-    var deferred = $q.defer(),
-        promises = [],
+    var promises = [],
         length = options.files.length;
 
     for (var i = 0; i < length; i++) {
@@ -63,21 +69,20 @@ angular.module('pascalprecht.translate')
       }));
     }
 
-    $q.all(promises).then(function (data) {
-      var length = data.length,
-          mergedData = {};
+    return $q.all(promises)
+      .then(function (data) {
+        var length = data.length,
+            mergedData = {};
 
-      for (var i = 0; i < length; i++) {
-        for (var key in data[i]) {
-          mergedData[key] = data[i][key];
+        for (var i = 0; i < length; i++) {
+          for (var key in data[i]) {
+            mergedData[key] = data[i][key];
+          }
         }
-      }
 
-      deferred.resolve(mergedData);
-    }, function (data) {
-      deferred.reject(data);
-    });
-
-    return deferred.promise;
+        return mergedData;
+      });
   };
-}]);
+}
+
+$translateStaticFilesLoader.displayName = '$translateStaticFilesLoader';

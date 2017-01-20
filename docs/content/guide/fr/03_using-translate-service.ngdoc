@@ -42,12 +42,18 @@ au niveau d'un contrôleur (ou d'un service) devrait ressembler à ceci :
 app.controller('Ctrl', ['$scope', '$translate', function ($scope, $translate) {
   $translate('HEADLINE').then(function (headline) {
     $scope.headline = headline;
+  }, function (translationId) {
+    $scope.headline = translationId;
   });
   $translate('PARAGRAPH').then(function (paragraph) {
     $scope.paragraph = paragraph;
+  }, function (translationId) {
+    $scope.paragraph = translationId;
   });
   $translate('NAMESPACE.PARAGRAPH').then(function (anotherOne) {
     $scope.namespaced_paragraph = anotherOne;
+  }, function (translationId) {
+    $scope.namespaced_paragraph = translationId;
   });
 }]);
 </pre>
@@ -66,6 +72,10 @@ app.controller('Ctrl', ['$scope', '$translate', function ($scope, $translate) {
     $scope.headline = translations.HEADLINE;
     $scope.paragraph = translations.PARAGRAPH;
     $scope.namespaced_paragraph = translations['NAMESPACE.PARAGRAPH'];
+  }, function (translationIds) {
+    $scope.headline = translationIds.headline;
+    $scope.paragraph = translationIds.paragraph;
+    $scope.namespaced_paragraph = translationIds.namespaced_paragraph;
   });
 }]);
 </pre>
@@ -94,7 +104,7 @@ Toutefois, cela ne veut pas dire qu'il sait quand une langue a été modifiée. 
 les traductions traduites par un appel de `$translate` dans une directive, ne se mettent pas à jour
 en cas de changement de la langue lors de l'exécution.
 
-Vous pouvez résoudre ce problème en enveloppant simplement votre appel `$translate` dans un callback `$translateChangeSucces`
+Vous pouvez résoudre ce problème en enveloppant simplement votre appel `$translate` dans un callback `$translateChangeSuccess`
 sur `$rootScope`, qui se déclenchera à chaque fois qu'un changement de traductiona été fait avec succès.
 Une fois qu'elle a changé, il vous suffit de ré-exécuter le code, qui vous donne vos traductions nécessaires.
 
@@ -105,6 +115,8 @@ app.controller('Ctrl', ['$scope', '$translate', '$rootScope', function ($scope, 
   $rootScope.$on('$translateChangeSuccess', function () {
     $translate('HEADLINE').then(function (translation) {
       $scope.headline = translation;
+    }, function (translationId) {
+      $scope.headline = translationId;
     });
   });
 }]);
@@ -137,15 +149,21 @@ Voici un exemple qui fonctionne :
       }]);
 
       app.controller('Ctrl', ['$scope', '$translate', function ($scope, $translate) {
-        // exposer les traductions via le service `$translate`
+        // expose translation via `$translate` service
         $translate('HEADLINE').then(function (headline) {
           $scope.headline = headline;
+        }, function (translationId) {
+          $scope.headline = translationId;
         });
         $translate('PARAGRAPH').then(function (paragraph) {
           $scope.paragraph = paragraph;
+        }, function (translationId) {
+          $scope.paragraph = translationId;
         });
         $translate('NAMESPACE.PARAGRAPH').then(function (anotherOne) {
           $scope.namespaced_paragraph = anotherOne;
+        }, function (translationId) {
+          $scope.namespaced_paragraph = translationId;
         });
       }]);
     </script>

@@ -90,7 +90,7 @@ Alternativement, si vous avez plusieurs fichiers de traduction à des endroits
 distincts, vous pouvez plutôt fournir un tableau de fichiers au chargeur:
 
 <pre>
-$translateProvider.useStaticFilesLoader(
+$translateProvider.useStaticFilesLoader({
     files: [{
         prefix: 'locale-',
         suffix: '.json'
@@ -101,7 +101,7 @@ $translateProvider.useStaticFilesLoader(
         prefix: 'another/path/to/locales/',
         suffix: ''
     }]
-);
+});
 $translateProvider.preferredLanguage('fr');
 </pre>
 
@@ -288,10 +288,10 @@ valable pour le constructeur `useLoader(name, options)` ainsi que pour les const
 tels que `useStaticFilesLoader(options)` :
 
 <pre>
-$translationProvider.useLoader('customLoader', {
+$translateProvider.useLoader('customLoader', {
   settingA: 'foobar'
 });
-$translationProvider.useStaticFilesLoader({
+$translateProvider.useStaticFilesLoader({
   $http: {
     method: 'POST'
   }
@@ -312,19 +312,19 @@ instance de cache. Vous pouvez voir plus de détails à ce sujet dans les
 Pour activer un cache standard, vous pouvez utiliser la technique suivante :
 
 <pre>
-$translationProvider.useLoaderCache(true); // Par défaut c'est à false, ce qui signifie que c'est désactivé
+$translateProvider.useLoaderCache(true); // Par défaut c'est à false, ce qui signifie que c'est désactivé
 </pre>
 
 Si vous avez déjà un exemple (de configuration avancée), vous pouvez la lier comme ceci :
 
 <pre>
-$translationProvider.useLoaderCache(yourSpecialCacheService);
+$translateProvider.useLoaderCache(yourSpecialCacheService);
 </pre>
 
 Angular-Translate supporte aussi le Lazy-Binding, de sorte que ceci fonctionne aussi :
 
 <pre>
-$translationProvider.useLoaderCache('yourSpecialCacheService');
+$translateProvider.useLoaderCache('yourSpecialCacheService');
 </pre>
 
 L'instance nommée avec l'ID `yourspecialCacheService` est chargé à la demande à partir du contexte.
@@ -353,7 +353,7 @@ $translateProvider.useStaticFilesLoader({
     'prefix': 'locale-',
     'suffix': '.json'
 });
-$translateProvider.preferredLanguage('en');
+$translateProvider.preferredLanguage('fr');
 </pre>
 
 Mettons à jour notre exemple d'application en conséquence pour utiliser un chargeur asynchrone !
@@ -387,8 +387,8 @@ laissez votre serveur envoyer le JSON comme JSON et non comme du texte brut !
   "PASSED_AS_ATTRIBUTE": "I'm passed as attribute value, cool ha?",
   "PASSED_AS_INTERPOLATION": "Beginners! I'm interpolated!",
   "VARIABLE_REPLACEMENT": "Hi {{name}}",
-  "BUTTON_LANG_EN": "french",
-  "BUTTON_LANG_FR": "english"
+  "BUTTON_LANG_EN": "French",
+  "BUTTON_LANG_FR": "English"
 }
 </pre>
 
@@ -403,6 +403,35 @@ $translateProvider.useStaticFilesLoader({
 // chargement de la table 'fr' au démarrage
 $translateProvider.preferredLanguage('fr');
 </pre>
+
+## Forcer le rechargement asynchrone
+
+Lors de l'utilisation d'une combinaison de `$translateProvider.translations()` et
+`$translateProvider.{{peu importe}}Loader`, pour chaque clé de langue déclarée à
+l'aide de `$translateProvider.translations()`, le chargeur asynchrone ne sera
+jamais appelé.
+
+Pour contourner ce problème, vous pouvez activer `$translateProvider.forceAsyncReload()`
+comme ceci:
+
+<pre>
+$translateProvider.translations('en', {
+    'HELLO_TEXT': 'Salut tout le monde !!'
+});
+$translateProvider.useStaticFilesLoader({
+    'prefix': 'locale-',
+    'suffix': '.json'
+});
+$translateProvider.preferredLanguage('fr');
+$translateProvider.forceAsyncReload(true);
+</pre>
+
+De cette façon, même si la clé de la langue est déjà déclarée à l'aide de
+`$translateProvider.translations()` le chargeur asynchrone sera appelé
+et les traductions des deux sources seront fusionnés.
+
+**Note:** Si un même identifiant de traduction est déclaré dans les deux sources,
+la traduction du chargeur asynchrone sera utilisée.
 
 Étant donné que nous n'avons pas à faire de changements dans nos contrôleurs ou notre HTML,
 nous avons fini ! Jetez un oeil à l'application :

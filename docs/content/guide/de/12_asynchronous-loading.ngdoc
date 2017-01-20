@@ -85,7 +85,7 @@ Falls mehrere Dateien an verschiedenen Orten zusammengefügt werden sollen,
 kann alternativ auch ein Array von Dateien definiert werden:
 
 <pre>
-$translateProvider.useStaticFilesLoader(
+$translateProvider.useStaticFilesLoader({
     files: [{
         prefix: 'locale-',
         suffix: '.json'
@@ -96,7 +96,7 @@ $translateProvider.useStaticFilesLoader(
         prefix: 'another/path/to/locales/',
         suffix: ''
     }]
-);
+});
 $translateProvider.preferredLanguage('en');
 </pre>
 
@@ -272,10 +272,10 @@ gilt sowohl für den allgemeinen Konstructor `useLoader(name, options)` als auch
 die Shortcut-Konstruktoren wie `useStaticFilesLoader(options)`:
 
 <pre>
-$translationProvider.useLoader('customLoader', {
+$translateProvider.useLoader('customLoader', {
   settingA: 'foobar'
 });
-$translationProvider.useStaticFilesLoader({
+$translateProvider.useStaticFilesLoader({
   $http: {
     method: 'POST'
   }
@@ -294,19 +294,19 @@ Bei der Verwendung der Standard Loader kann man das Caching steuern. Weitere Inf
 Den Cache kann man sehr leicht mit folgender Konfiguration aktivieren:
 
 <pre>
-$translationProvider.useLoaderCache(true); // default ist false, also deaktiviert
+$translateProvider.useLoaderCache(true); // default ist false, also deaktiviert
 </pre>
 
 Falls Du bereits eine eigene Instanz konfiguriert hast, kannst Du diese auch direkt übergeben:
 
 <pre>
-$translationProvider.useLoaderCache(yourSpecialCacheService);
+$translateProvider.useLoaderCache(yourSpecialCacheService);
 </pre>
 
 Angular-Translate unterstützt auch das Lazy-Binding, so dass auch folgendes funktioniert:
 
 <pre>
-$translationProvider.useLoaderCache('yourSpecialCacheService');
+$translateProvider.useLoaderCache('yourSpecialCacheService');
 </pre>
 
 Die Instanz mit der ID `yourSpecialCacheService` wird erst bei Bedarf aus dem Kontext geladen.
@@ -331,8 +331,12 @@ $translateProvider.useStaticFilesLoader({
     'prefix': 'locale-',
     'suffix': '.json'
 });
-$translateProvider.preferredLanguage('de');
+$translateProvider.preferredLanguage('en');
 </pre>
+
+**Hinweis:** Ein Benutzer von Angular Translate eine schöne Lösung
+[mittels Grunt](https://github.com/angular-translate/angular-translate/issues/921) veröffentlicht.
+Ein anderer Benutzer hat eine Lösung [mittels Gulp](https://www.npmjs.com/package/gulp-ng-lang2js) veröffentlicht.
 
 Okay, passen wir unsere App mit dem staticFilesLoader an. Als erstes ziehen wir
 die Übersetzungen aus dem Code und schreiben Sie in seperate Dateien:
@@ -346,8 +350,8 @@ die Übersetzungen aus dem Code und schreiben Sie in seperate Dateien:
   "PASSED_AS_ATTRIBUTE": "I'm passed as attribute value, cool ha?",
   "PASSED_AS_INTERPOLATION": "Beginners! I'm interpolated!",
   "VARIABLE_REPLACEMENT": "Hi {{name}}",
-  "BUTTON_LANG_DE": "german",
-  "BUTTON_LANG_EN": "english"
+  "BUTTON_LANG_DE": "German",
+  "BUTTON_LANG_EN": "English"
 }
 </pre>
 
@@ -378,6 +382,32 @@ $translateProvider.preferredLanguage('en');
 $translateProvider.useLocalStorage();
 </pre>
 
+## Asynchrones Laden erzwingen
+
+Wenn eine Kombination von `$translateProvider.translations()` und `$translateProvider.{{whatever}}Loader`
+genutzt wird, erfolgt KEIN Aufruf des asynchrone Lademechanismus für alle Sprachen, bei denen schon
+Übersetzungen per `$translateProvider.translations()` erzeugt wurden.
+
+Um dieses Verhalten zu verhindern, muss `$translateProvider.forceAsyncReload()` initialisiert werden:
+
+<pre>
+$translateProvider.translations('en', {
+    'HELLO_TEXT': 'Hello World!'
+});
+$translateProvider.useStaticFilesLoader({
+    'prefix': 'locale-',
+    'suffix': '.json'
+});
+$translateProvider.preferredLanguage('en');
+$translateProvider.forceAsyncReload(true);
+</pre>
+
+Durch diese Änderung wird bewirkt, das beide Datenquellen / Sprachtabellen genutzt werden und somit
+der asynchrone Lademechanismus aufgerufen wird. Das Ergebnis ist eine zusammengesetzte Sprachtabelle.
+
+**Anmerkung:** Falls derselbe Sprachschlüssel in beiden Quellen definiert ist, wird ausschließlich der
+Schlüssel aus der asynchronen Datenquelle genutzt!
+
 Da wir keine Änderungen im HTML oder unseren Controllern machen müssen, sind wir
 schon fertig! Hier ist die funktionierende App:
 
@@ -394,8 +424,8 @@ schon fertig! Hier ist die funktionierende App:
           "PASSED_AS_ATTRIBUTE": "I'm passed as attribute value, cool ha?",
           "PASSED_AS_INTERPOLATION": "Beginners! I'm interpolated!",
           "VARIABLE_REPLACEMENT": "Hi {{name}}",
-          "BUTTON_LANG_DE": "german",
-          "BUTTON_LANG_EN": "english"
+          "BUTTON_LANG_DE": "German",
+          "BUTTON_LANG_EN": "English"
         });
         // configures staticFilesLoader
         $translateProvider.useStaticFilesLoader({

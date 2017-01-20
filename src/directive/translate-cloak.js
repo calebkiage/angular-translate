@@ -20,7 +20,11 @@ angular.module('pascalprecht.translate')
  *                                  or hiding the cloak. Basically it relies on the translation
  *                                  resolve.
  */
-.directive('translateCloak', ['$rootScope', '$translate', function ($rootScope, $translate) {
+.directive('translateCloak', translateCloakDirective);
+
+function translateCloakDirective($translate, $rootScope) {
+
+  'use strict';
 
   return {
     compile: function (tElement) {
@@ -29,22 +33,26 @@ angular.module('pascalprecht.translate')
       },
       removeCloak = function () {
         tElement.removeClass($translate.cloakClassName());
-      },
-      removeListener = $rootScope.$on('$translateChangeEnd', function () {
+      };
+      $translate.onReady(function () {
         removeCloak();
-        removeListener();
-        removeListener = null;
       });
       applyCloak();
 
       return function linkFn(scope, iElement, iAttr) {
-        // Register a watcher for the defined translation allowing a fine tuned cloak
         if (iAttr.translateCloak && iAttr.translateCloak.length) {
+          // Register a watcher for the defined translation allowing a fine tuned cloak
           iAttr.$observe('translateCloak', function (translationId) {
             $translate(translationId).then(removeCloak, applyCloak);
+          });
+          // Register for change events as this is being another indicicator revalidating the cloak)
+          $rootScope.$on('$translateChangeSuccess', function () {
+            $translate(iAttr.translateCloak).then(removeCloak, applyCloak);
           });
         }
       };
     }
   };
-}]);
+}
+
+translateCloakDirective.displayName = 'translateCloakDirective';

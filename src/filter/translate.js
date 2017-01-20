@@ -50,19 +50,25 @@ angular.module('pascalprecht.translate')
     </file>
    </example>
  */
-.filter('translate', ['$parse', '$translate', function ($parse, $translate) {
-  var translateFilter = function (translationId, interpolateParams, interpolation) {
+.filter('translate', translateFilterFactory);
 
+function translateFilterFactory($parse, $translate) {
+
+  'use strict';
+
+  var translateFilter = function (translationId, interpolateParams, interpolation, forceLanguage) {
     if (!angular.isObject(interpolateParams)) {
       interpolateParams = $parse(interpolateParams)(this);
     }
 
-    return $translate.instant(translationId, interpolateParams, interpolation);
+    return $translate.instant(translationId, interpolateParams, interpolation, forceLanguage);
   };
 
-  // Since AngularJS 1.3, filters which are not stateless (depending at the scope)
-  // have to explicit define this behavior.
-  translateFilter.$stateful = true;
+  if ($translate.statefulFilter()) {
+    translateFilter.$stateful = true;
+  }
 
   return translateFilter;
-}]);
+}
+
+translateFilterFactory.displayName = 'translateFilterFactory';
